@@ -1,7 +1,7 @@
 from airflow.sdk import dag, task
 from datetime import datetime
 import requests
-import psycopg2
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 @dag(schedule='@weekly', start_date=datetime(2026, 1, 1), catchup=False)
 def fuel_price_pipeline():
@@ -14,7 +14,8 @@ def fuel_price_pipeline():
 
     @task
     def load(records):
-        conn = psycopg2.connect(host="host.docker.internal", port=5432, dbname="setel_project", user="postgres", password="learnsql")
+        hook = PostgresHook(postgres_conn_id='setel_postgres')
+        conn = hook.get_conn()
         cur = conn.cursor()
         for record in records:
             cur.execute(
@@ -28,7 +29,8 @@ def fuel_price_pipeline():
 
     @task
     def transform(_):
-        conn = psycopg2.connect(host="host.docker.internal", port=5432, dbname="setel_project", user="postgres", password="learnsql")
+        hook = PostgresHook(postgres_conn_id='setel_postgres')
+        conn = hook.get_conn()
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO fuel_prices_monthly (month, avg_ron95, avg_ron97, avg_diesel)
